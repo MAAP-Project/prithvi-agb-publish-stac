@@ -3,7 +3,7 @@
 # job's output directory. catalog.json arriving in dps_output triggers
 # ingestion into the internal DPS STAC (dps-stac.maap-project.org).
 #   $1  s3:// folder containing catalog.json and the collection/item tree
-set -eo pipefail
+set -eox pipefail
 mkdir -p output
 if command -v aws >/dev/null 2>&1; then
     aws s3 cp --recursive "$1" output/
@@ -29,4 +29,4 @@ for pg in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=pre
 print("copied", n, "objects with boto3")
 PY
 fi
-find output -type f | head -20
+echo "files in output: $(find output -type f | wc -l)"
