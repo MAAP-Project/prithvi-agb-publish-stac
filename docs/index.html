@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prithvi AGB and HT</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+html,body{height:100%;margin:0;font:14px/1.4 system-ui,sans-serif}
+#map{position:absolute;inset:0;background:#10151a}
+.pop td{padding:1px 8px 1px 0;font-family:Consolas,Menlo,monospace;font-size:12px}
+.pop td:first-child{color:#667;font-family:inherit}
+.hint{position:absolute;bottom:10px;left:10px;z-index:1000;background:#1a2129e6;
+ color:#cfd8e0;padding:5px 10px;border-radius:6px;font-size:11.5px}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="hint">layers render from zoom 6 in &middot; click for values</div>
+<script>
+const T = "https://titiler-dps-stac.maap-project.org/collections";
+const AGB = "omshinde23__publish_prithvi_agb__main";
+const HT  = "omshinde23__publish_prithvi_ht__main";
+const url = (col, rescale, cmap) =>
+  `${T}/${col}/tiles/WebMercatorQuad/{z}/{x}/{y}?assets=cog&expression=b1` +
+  `&unscale=true&rescale=${rescale}&colormap_name=${cmap}`;
+const opts = {minZoom:6, maxNativeZoom:12, opacity:.85,
+              bounds:[[35.8,-180],[78.6,180]]};
+
+const map = L.map("map", {center:[56.4,-99.5], zoom:7, minZoom:3, maxZoom:14});
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {attribution:"&copy; OpenStreetMap contributors | Prithvi-EO-2.0 / UAH / NASA MSFC",
+   maxZoom:19}).addTo(map);
+
+const agb = L.tileLayer(url(AGB, "0,125", "viridis"), opts).addTo(map);
+const ht  = L.tileLayer(url(HT,  "0,30",  "inferno"), opts);
+L.control.layers({"agb": agb, "ht": ht}, null,
+                 {collapsed:false, position:"topright"}).addTo(map);
+
+map.on("click", async e => {
+  const {lat, lng} = e.latlng;
+  const pop = L.popup().setLatLng(e.latlng).setContent("querying&hellip;").openOn(map);
+  const get = async col => {
+    const r = await fetch(`${T}/${col}/point/${lng.toFixed(5)},${lat.toFixed(5)}?assets=cog`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.assets && j.assets.length ? j.assets[0].values : null;
+  };
+  try {
+    const [a, h] = await Promise.all([get(AGB), get(HT)]);
+    if (!a && !h) { pop.setContent("no data here"); return; }
+    const f = (v, s, d) => v == null || v[0] == null ? "&ndash;"
+      : `${(v[0]*s).toFixed(d)} &plusmn; ${(v[1]*s).toFixed(d)}`;
+    pop.setContent(`<table class="pop">
+      <tr><td>agb</td><td>${f(a, .1, 1)} Mg/ha</td></tr>
+      <tr><td>ht</td><td>${f(h, .01, 2)} m</td></tr></table>`);
+  } catch { pop.setContent("point query failed"); }
+});
+</script>
+</body>
+</html>
