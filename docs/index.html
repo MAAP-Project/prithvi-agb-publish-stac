@@ -3,21 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prithvi AGB and HT</title>
+<title>Prithvi Boreal 2020</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-html,body{height:100%;margin:0;font:14px/1.4 system-ui,sans-serif}
-#map{position:absolute;inset:0;background:#10151a}
-.pop td{padding:1px 8px 1px 0;font-family:Consolas,Menlo,monospace;font-size:12px}
-.pop td:first-child{color:#667;font-family:inherit}
-.hint{position:absolute;bottom:10px;left:10px;z-index:1000;background:#1a2129e6;
- color:#cfd8e0;padding:5px 10px;border-radius:6px;font-size:11.5px}
+:root{
+  --panel:#141b22f0; --fg:#e8edf2; --muted:#9db0bf; --rule:#2c3944;
+  --accent:#7fd069; --mono:"SF Mono",Consolas,Menlo,monospace;
+}
+html,body{height:100%;margin:0;font:14px/1.45 system-ui,sans-serif}
+#map{position:absolute;inset:0;background:#dfe8ee}
+.panel{position:absolute;top:12px;right:12px;z-index:1000;width:300px;
+  max-width:calc(100vw - 24px);max-height:calc(100% - 24px);overflow:auto;
+  background:var(--panel);color:var(--fg);backdrop-filter:blur(6px);
+  border:1px solid var(--rule);border-radius:10px;padding:14px 16px;
+  box-shadow:0 4px 18px #0007}
+.panel h1{font-size:16px;margin:0 0 2px;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:11.5px;margin:0 0 10px}
+.layer{display:flex;align-items:center;gap:8px;padding:6px 0 2px;cursor:pointer}
+.layer input{accent-color:var(--accent);width:15px;height:15px}
+.layer .nm{flex:1;font-weight:600}
+.layer .un{color:var(--muted);font-size:11px;font-family:var(--mono)}
+.ramp{height:8px;border-radius:4px;margin:3px 0 0 23px}
+.ramp-lbl{display:flex;justify-content:space-between;color:var(--muted);
+  font-size:10px;font-family:var(--mono);margin:1px 0 2px 23px}
+.ldesc{color:var(--muted);font-size:11px;margin:2px 0 4px 23px}
+.op{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;
+  color:var(--muted)}
+.op input{flex:1;accent-color:var(--accent)}
+details{border-top:1px solid var(--rule);margin-top:10px;padding-top:8px}
+summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--fg)}
+details p{color:var(--muted);font-size:12px;margin:8px 0}
+details a{color:var(--accent)}
+.note{border-top:1px solid var(--rule);margin-top:10px;padding-top:8px;
+  color:var(--muted);font-size:11px}
+.note b{color:var(--fg)}
+.leaflet-popup-content-wrapper{background:var(--panel);color:var(--fg);
+  border:1px solid var(--rule);border-radius:8px}
+.leaflet-popup-tip{background:var(--panel)}
+.pop td{padding:1px 8px 1px 0;font-family:var(--mono);font-size:12px}
+.pop td:first-child{color:var(--muted);font-family:inherit}
 </style>
 </head>
 <body>
 <div id="map"></div>
-<div class="hint">layers render from zoom 6 in &middot; click for values</div>
+<div class="panel">
+  <h1>Prithvi Boreal 2020</h1>
+  <p class="sub">Aboveground biomass and canopy height for the circumboreal
+  forest &middot; 30&nbsp;m &middot; 2020</p>
+
+  <label class="layer"><input type="checkbox" id="ck_agb" checked>
+    <span class="nm">Aboveground biomass</span><span class="un">Mg/ha</span></label>
+  <div class="ldesc">Predicted biomass density with its per-pixel uncertainty
+  available on click.</div>
+  <div class="ramp" style="background:linear-gradient(90deg,#440154,#3b528b,#21918c,#5ec962,#fde725)"></div>
+  <div class="ramp-lbl"><span>0</span><span>125 Mg/ha</span></div>
+
+  <label class="layer"><input type="checkbox" id="ck_ht">
+    <span class="nm">Canopy height</span><span class="un">m</span></label>
+  <div class="ldesc">Predicted ATL08 h_canopy (RH98) vegetation height.</div>
+  <div class="ramp" style="background:linear-gradient(90deg,#000004,#781c6d,#ed6925,#fcffa4)"></div>
+  <div class="ramp-lbl"><span>0</span><span>30 m</span></div>
+
+  <div class="op">opacity <input id="opacity" type="range" min="20" max="100" value="85"></div>
+
+  <details>
+    <summary>About this map</summary>
+    <p>These layers come from NASA-IBM <b>Prithvi-EO-2.0</b>, a geospatial
+    foundation model fine-tuned on ICESat-2 ATL08 canopy and biomass
+    retrievals for 2020. Inputs are Harmonized Landsat Sentinel-2 summer
+    reflectance and Copernicus GLO-30 terrain; the model predicts biomass
+    density, vegetation height and their uncertainties at 30&nbsp;m.</p>
+    <p>Predictions cover 4,940 tiles (about 31 million&nbsp;km&sup2;) on the
+    same 90&nbsp;km grid as the ICESat-2 boreal v3.1 product, so the two maps
+    compare pixel for pixel. Non-vegetated surfaces (water, built, bare, ice)
+    are masked with ESA WorldCover.</p>
+    <p>Tiles are served live by TiTiler from cloud-optimized GeoTIFFs
+    catalogued in the MAAP STAC
+    (<a href="https://dps-stac-browser.maap-project.org/catalogs/user-omshinde23" target="_blank" rel="noopener">browse the collections</a>).
+    Prepared at the University of Alabama in Huntsville with NASA MSFC.</p>
+  </details>
+
+  <div class="note">Layers render from <b>zoom 6</b> in; zoom into the boreal
+  to see data. <b>Click the map</b> for biomass and height values at that
+  pixel. Gaps inside the domain are masked water, built, bare and ice.</div>
+</div>
 <script>
 const T = "https://titiler-dps-stac.maap-project.org/collections";
 const AGB = "omshinde23__publish_prithvi_agb__main";
@@ -33,10 +103,19 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
   {attribution:"&copy; OpenStreetMap contributors | Prithvi-EO-2.0 / UAH / NASA MSFC",
    maxZoom:19}).addTo(map);
 
-const agb = L.tileLayer(url(AGB, "0,125", "viridis"), opts).addTo(map);
-const ht  = L.tileLayer(url(HT,  "0,30",  "inferno"), opts);
-L.control.layers({"agb": agb, "ht": ht}, null,
-                 {collapsed:false, position:"topright"}).addTo(map);
+const layers = {
+  ck_agb: L.tileLayer(url(AGB, "0,125", "viridis"), opts).addTo(map),
+  ck_ht:  L.tileLayer(url(HT,  "0,30",  "inferno"), opts),
+};
+for (const id of Object.keys(layers)) {
+  document.getElementById(id).addEventListener("change", e => {
+    if (e.target.checked) layers[id].addTo(map).setOpacity(opacity.value / 100);
+    else map.removeLayer(layers[id]);
+  });
+}
+const opacity = document.getElementById("opacity");
+opacity.addEventListener("input", () =>
+  Object.values(layers).forEach(l => l.setOpacity(opacity.value / 100)));
 
 map.on("click", async e => {
   const {lat, lng} = e.latlng;
@@ -49,12 +128,12 @@ map.on("click", async e => {
   };
   try {
     const [a, h] = await Promise.all([get(AGB), get(HT)]);
-    if (!a && !h) { pop.setContent("no data here"); return; }
+    if (!a && !h) { pop.setContent("no data at this point"); return; }
     const f = (v, s, d) => v == null || v[0] == null ? "&ndash;"
       : `${(v[0]*s).toFixed(d)} &plusmn; ${(v[1]*s).toFixed(d)}`;
     pop.setContent(`<table class="pop">
-      <tr><td>agb</td><td>${f(a, .1, 1)} Mg/ha</td></tr>
-      <tr><td>ht</td><td>${f(h, .01, 2)} m</td></tr></table>`);
+      <tr><td>Biomass</td><td>${f(a, .1, 1)} Mg/ha</td></tr>
+      <tr><td>Height</td><td>${f(h, .01, 2)} m</td></tr></table>`);
   } catch { pop.setContent("point query failed"); }
 });
 </script>
